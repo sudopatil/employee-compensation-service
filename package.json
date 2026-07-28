@@ -1,0 +1,30 @@
+{
+  "name": "employee-compensation-service",
+  "version": "1.0.0",
+  "description": "Azure Functions — Employee Compensation Service",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "db:setup": "tsx src/scripts/setup-db.ts",
+    "db:migrate": "tsx src/scripts/migrate.ts",
+    "db:seed": "tsx src/scripts/seed.ts",
+    "db:reset": "tsx src/scripts/reset-db.ts",
+    "predev": "npm run db:setup",
+    "build": "tsc",
+    "prestart": "npm run build",
+    "start": "func start",
+    "dev": "npm run build && func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.16.2",
+    "dotenv": "^16.4.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0",
+    "azure-functions-core-tools": "^4.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.4.0"
+  }
+}
