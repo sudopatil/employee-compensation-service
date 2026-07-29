@@ -1,20 +1,6 @@
 import { getPool } from "../config/database";
 
-// ============================================================
-// REPOSITORY LAYER
-// ============================================================
-// This layer has ONE job: talk to the database.
-// - No HTTP logic (that's the controller's job)
-// - No business logic (that's the service's job)
-// - Only SQL queries with parameterized placeholders ($1, $2)
-//
-// WHY parameterized queries prevent SQL injection:
-// When you write: query("SELECT * FROM Employee WHERE id = $1", [userId])
-// The database treats $1 as DATA, never as SQL code.
-// Even if userId = "1; DROP TABLE Employee", it's treated as a
-// literal string, not executed. The query plan is compiled first,
-// then parameters are bound — no string concatenation, no injection.
-// ============================================================
+// Repository layer: raw parameterized SQL for Employee CRUD operations.
 
 export interface EmployeeRow {
   employeeid: number;
@@ -46,8 +32,7 @@ export interface UpdateEmployeeData {
   hireDate?: string;
 }
 
-// -------- CRUD --------
-
+// Inserts a new employee and returns the generated row.
 export async function insertEmployee(data: CreateEmployeeData): Promise<EmployeeRow> {
   const pool = getPool();
   const result = await pool.query(
@@ -59,6 +44,7 @@ export async function insertEmployee(data: CreateEmployeeData): Promise<Employee
   return result.rows[0];
 }
 
+// Fetches one employee with department details.
 export async function findEmployeeById(id: number): Promise<EmployeeRow | null> {
   const pool = getPool();
   const result = await pool.query(
@@ -71,6 +57,7 @@ export async function findEmployeeById(id: number): Promise<EmployeeRow | null> 
   return result.rows[0] || null;
 }
 
+// Lists employees, optionally filtered by department.
 export async function findAllEmployees(departmentId?: number): Promise<EmployeeRow[]> {
   const pool = getPool();
 
@@ -92,10 +79,11 @@ export async function findAllEmployees(departmentId?: number): Promise<EmployeeR
   return result.rows;
 }
 
+// Updates only the fields provided in the request.
 export async function updateEmployeeById(id: number, data: UpdateEmployeeData): Promise<EmployeeRow | null> {
   const pool = getPool();
 
-  // Build SET clause dynamically — only update fields that were provided
+  // Build SET dynamically so omitted fields are left unchanged.
   const setClauses: string[] = [];
   const values: any[] = [];
   let paramIndex = 1;
@@ -128,12 +116,7 @@ export async function updateEmployeeById(id: number, data: UpdateEmployeeData): 
   return result.rows[0] || null;
 }
 
-// WHY dynamic SET?
-// The client sends only the fields they want to change.
-// If they send { bonus: 50000 }, we update ONLY bonus.
-// If we updated all columns, we'd accidentally null out fields
-// the client didn't even mention. This is PATCH semantics.
-
+// Deletes one employee by ID.
 export async function deleteEmployeeById(id: number): Promise<boolean> {
   const pool = getPool();
   const result = await pool.query(

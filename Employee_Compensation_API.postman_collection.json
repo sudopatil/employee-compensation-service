@@ -1,0 +1,564 @@
+{
+  "info": {
+    "name": "Employee Compensation Service",
+    "description": "Full API test suite — covers Part A (CRUD), Part B (Reports), and Part C (Default Bonus)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:7071/api"
+    }
+  ],
+  "item": [
+    {
+      "name": "Part A — CRUD",
+      "item": [
+        {
+          "name": "A1. Get All Employees",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/employees",
+            "description": "Should return all 8 seeded employees"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns 8 employees', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.eql(8);",
+                  "  pm.expect(body.data).to.be.an('array').with.lengthOf(8);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A2. Get Employees by Department (Engineering = 1)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/employees?departmentId=1",
+            "description": "Engineering has 3 employees: Amit, Priya, Rohan"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns 3 Engineering employees', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.eql(3);",
+                  "  body.data.forEach(e => pm.expect(e.departmentname).to.eql('Engineering'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A3. Get Employee by ID (Amit = 1)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/employees/1",
+            "description": "Amit Sharma, Engineering, Salary 1200000, Bonus 150000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns Amit Sharma', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.firstname).to.eql('Amit');",
+                  "  pm.expect(body.lastname).to.eql('Sharma');",
+                  "  pm.expect(body.departmentname).to.eql('Engineering');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A4. Get Employee — Not Found (ID 999)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/employees/999",
+            "description": "Should return 404"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error message', () => {",
+                  "  pm.expect(pm.response.json().error).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A5. Get Employee — Invalid ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/employees/abc",
+            "description": "Should return 400 for non-numeric ID"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A6. Create Employee (with bonus)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/employees",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Raj\",\n  \"lastName\": \"Kumar\",\n  \"departmentId\": 1,\n  \"salary\": 950000,\n  \"bonus\": 80000,\n  \"hireDate\": \"2024-06-01\"\n}"
+            },
+            "description": "Creates a new employee. Should return 201 with the created record including auto-generated EmployeeID."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Has auto-generated ID', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.employeeid).to.be.a('number');",
+                  "  pm.expect(body.firstname).to.eql('Raj');",
+                  "  pm.expect(body.lastname).to.eql('Kumar');",
+                  "  // Save ID for later tests",
+                  "  pm.collectionVariables.set('newEmployeeId', body.employeeid);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A7. Create Employee (without bonus)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/employees",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Neha\",\n  \"lastName\": \"Gupta\",\n  \"departmentId\": 2,\n  \"salary\": 700000\n}"
+            },
+            "description": "Bonus omitted — should be NULL in response"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Bonus is null', () => {",
+                  "  pm.expect(pm.response.json().bonus).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A8. Create Employee — Validation Error (missing fields)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/employees",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"\",\n  \"salary\": -5000\n}"
+            },
+            "description": "Missing lastName, departmentId. Negative salary. Should return 400 with details."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Has validation details', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.details).to.be.an('array');",
+                  "  pm.expect(body.details.length).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A9. Create Employee — Invalid Department",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/employees",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"departmentId\": 999,\n  \"salary\": 500000\n}"
+            },
+            "description": "DepartmentID 999 doesn't exist. Should return 400 (foreign key violation)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 — FK violation', () => pm.response.to.have.status(400));",
+                  "pm.test('Error mentions department', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('department');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A10. Update Employee — Change Bonus",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/employees/2",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bonus\": 95000\n}"
+            },
+            "description": "Priya (ID 2) had NULL bonus. Update to 95000. Only bonus should change."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Bonus updated, other fields unchanged', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.firstname).to.eql('Priya');",
+                  "  pm.expect(parseFloat(body.bonus)).to.eql(95000);",
+                  "  pm.expect(parseFloat(body.salary)).to.eql(950000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A11. Update Employee — Remove Bonus (set to null)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/employees/2",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bonus\": null\n}"
+            },
+            "description": "Set Priya's bonus back to NULL"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Bonus is null again', () => {",
+                  "  pm.expect(pm.response.json().bonus).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A12. Update Employee — Not Found",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/employees/999",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"salary\": 1000000\n}"
+            },
+            "description": "ID 999 doesn't exist"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A13. Delete Employee",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/employees/{{newEmployeeId}}",
+            "description": "Delete the Raj Kumar we created in A6. Should return 204."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A14. Delete Employee — Already Deleted",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/employees/{{newEmployeeId}}",
+            "description": "Same ID again — should return 404 now"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Part B — Reports",
+      "item": [
+        {
+          "name": "B1. Total Bonus Paid",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/total-bonus",
+            "description": "Sum of all bonuses (NULL treated as 0).\nAmit=150000 + Rahul=80000 + Vikram=200000 + Ananya=50000 + Rohan=100000 = 580000\nTotal employees = 8, with bonus = 5"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Total bonus = 580000', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.totalBonusPaid).to.eql(580000);",
+                  "  pm.expect(body.totalEmployees).to.eql(8);",
+                  "  pm.expect(body.employeesWithBonus).to.eql(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B2. Employees Without Bonus",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/no-bonus",
+            "description": "3 employees have NULL bonus: Priya Patel, Sneha Desai, Meera Nair"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('3 employees without bonus', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.eql(3);",
+                  "  const names = body.data.map(e => e.lastname);",
+                  "  pm.expect(names).to.include.members(['Desai', 'Nair', 'Patel']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3. Bonus Percentages",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/bonus-percentages",
+            "description": "Only employees WITH bonus. Expected:\nVikram: 200000/1100000 = 18.18%\nAmit: 150000/1200000 = 12.50%\nRahul: 80000/800000 = 10.00%\nRohan: 100000/1500000 = 6.67%\nAnanya: 50000/900000 = 5.56%"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('5 employees with bonus percentages', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.eql(5);",
+                  "  // First should be highest percentage (Vikram ~18.18%)",
+                  "  pm.expect(body.data[0].lastname).to.eql('Singh');",
+                  "  pm.expect(parseFloat(body.data[0].bonus_percentage)).to.eql(18.18);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B4. Departments Where Bonus > Avg Salary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/departments-high-bonus",
+            "description": "Engineering: total bonus=400000, avg salary=1216667 → NO\nHR: total bonus=80000, avg salary=775000 → NO\nSales: total bonus=250000, avg salary=1000000 → NO\nMarketing: total bonus=0, avg salary=850000 → NO\nWith seed data, no department qualifies (bonus totals are much smaller than avg salaries)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has count and data', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('count');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B5. Employees Ranked by Bonus",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/bonus-ranking",
+            "description": "Expected order:\n1. Vikram (200000)\n2. Amit (150000)\n3. Rohan (100000)\n4. Rahul (80000)\n5. Ananya (50000)\n6-8. Priya, Sneha, Meera (NULL — ranked last)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('8 employees, Vikram first, NULLs last', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.count).to.eql(8);",
+                  "  // First = highest bonus (Vikram)",
+                  "  pm.expect(body.data[0].lastname).to.eql('Singh');",
+                  "  pm.expect(parseFloat(body.data[0].bonus)).to.eql(200000);",
+                  "  // Last 3 should have NULL bonus",
+                  "  const lastThree = body.data.slice(-3);",
+                  "  lastThree.forEach(e => pm.expect(e.bonus).to.be.null);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B6. Highest Compensation",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/highest-compensation",
+            "description": "Highest salary: Rohan (1500000)\nHighest total comp: Rohan (1500000 + 100000 = 1600000)\nVikram total: 1100000 + 200000 = 1300000\nSo Rohan wins BOTH → isSameEmployee = true"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Rohan has highest salary', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.highestSalary.lastname).to.eql('Joshi');",
+                  "  pm.expect(parseFloat(body.highestSalary.salary)).to.eql(1500000);",
+                  "});",
+                  "pm.test('Rohan also has highest total comp', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.highestTotalCompensation.lastname).to.eql('Joshi');",
+                  "  pm.expect(body.isSameEmployee).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Part C — Production Ready",
+      "item": [
+        {
+          "name": "C1. Effective Bonus (5% default)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/effective-bonus",
+            "description": "Employees without bonus get 5% of salary:\nPriya: 950000 * 0.05 = 47500 (is_default_bonus: true)\nSneha: 750000 * 0.05 = 37500 (is_default_bonus: true)\nMeera: 850000 * 0.05 = 42500 (is_default_bonus: true)\nOthers keep their actual bonus (is_default_bonus: false)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All 8 employees have effective_bonus', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.employees).to.be.an('array').with.lengthOf(8);",
+                  "  body.employees.forEach(e => {",
+                  "    pm.expect(e.effective_bonus).to.not.be.null;",
+                  "  });",
+                  "});",
+                  "pm.test('Default bonus employees flagged correctly', () => {",
+                  "  const body = pm.response.json();",
+                  "  const defaults = body.employees.filter(e => e.is_default_bonus === true);",
+                  "  pm.expect(defaults.length).to.eql(3);",
+                  "  // Priya: 950000 * 5% = 47500",
+                  "  const priya = body.employees.find(e => e.lastname === 'Patel');",
+                  "  pm.expect(parseFloat(priya.effective_bonus)).to.eql(47500);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

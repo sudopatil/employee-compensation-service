@@ -1,13 +1,8 @@
 import { getPool } from "../config/database";
 
-// ============================================================
-// REPORT REPOSITORY — Part B queries
-// ============================================================
-// Each function maps to one reporting requirement.
-// All NULL bonus handling is done in SQL using COALESCE / IS NULL.
-// ============================================================
+// Repository layer: raw parameterized SQL for compensation reports.
 
-// B1: Total bonus paid across the company (NULL → 0)
+// B1: Total bonus paid across the company, treating NULL as zero.
 export async function findTotalBonus() {
   const pool = getPool();
   const result = await pool.query(`
@@ -20,11 +15,7 @@ export async function findTotalBonus() {
   return result.rows[0];
 }
 
-// WHY nested COALESCE?
-// Inner: COALESCE(Bonus, 0) → each NULL bonus becomes 0 for summing
-// Outer: COALESCE(SUM(...), 0) → if table is empty, SUM returns NULL → we want 0
-
-// B2: Employees who have never received a bonus
+// B2: Employees who have never received a bonus.
 export async function findEmployeesWithoutBonus() {
   const pool = getPool();
   const result = await pool.query(`
@@ -37,12 +28,7 @@ export async function findEmployeesWithoutBonus() {
   return result.rows;
 }
 
-// WHY "IS NULL" not "= NULL"?
-// NULL = NULL → evaluates to NULL (not true!)
-// NULL is not a value — it's the ABSENCE of a value.
-// You must use IS NULL / IS NOT NULL for NULL comparisons.
-
-// B3: Bonus as percentage of salary (only for employees WITH bonus)
+// B3: Bonus percentage for employees with an awarded bonus.
 export async function findBonusPercentages() {
   const pool = getPool();
   const result = await pool.query(`
@@ -57,7 +43,7 @@ export async function findBonusPercentages() {
   return result.rows;
 }
 
-// B4: Departments where total bonus > department average salary
+// B4: Departments whose total bonus exceeds their average salary.
 export async function findDepartmentsWhereBonusExceedsAvgSalary() {
   const pool = getPool();
   const result = await pool.query(`
@@ -74,16 +60,7 @@ export async function findDepartmentsWhereBonusExceedsAvgSalary() {
   return result.rows;
 }
 
-// WHY HAVING and not WHERE?
-// WHERE filters rows BEFORE aggregation (GROUP BY).
-// HAVING filters groups AFTER aggregation.
-// We need SUM and AVG computed first, then compare them.
-//
-// Interview trick question: "Can you use WHERE instead of HAVING?"
-// No — because SUM(Bonus) doesn't exist at the row level.
-// WHERE sees individual rows; HAVING sees aggregated groups.
-
-// B5: All employees ranked by bonus (no-bonus employees ranked last)
+// B5: Employees ranked by bonus with no-bonus employees last.
 export async function findEmployeesRankedByBonus() {
   const pool = getPool();
   const result = await pool.query(`
@@ -102,19 +79,7 @@ export async function findEmployeesRankedByBonus() {
   return result.rows;
 }
 
-// WHY the CASE inside RANK()?
-// Creates a two-tier sort:
-//   Tier 0 (CASE = 0): employees WITH bonus → sorted DESC by amount
-//   Tier 1 (CASE = 1): employees WITHOUT bonus → all ranked last
-//
-// WHY RANK() not ROW_NUMBER()?
-// RANK() gives equal rank to ties (same bonus = same rank).
-// ROW_NUMBER() arbitrarily breaks ties (unfair for comp reports).
-// DENSE_RANK() would also work — difference is gap handling:
-//   RANK:       1, 2, 2, 4 (skips 3)
-//   DENSE_RANK: 1, 2, 2, 3 (no gap)
-
-// B6: Highest salary + whether same person has highest total comp
+// B6: Employee with the highest base salary.
 export async function findHighestSalaryEmployee() {
   const pool = getPool();
   const result = await pool.query(`
@@ -129,6 +94,7 @@ export async function findHighestSalaryEmployee() {
   return result.rows[0] || null;
 }
 
+// B6: Employee with the highest salary plus bonus.
 export async function findHighestTotalCompEmployee() {
   const pool = getPool();
   const result = await pool.query(`
@@ -143,7 +109,7 @@ export async function findHighestTotalCompEmployee() {
   return result.rows[0] || null;
 }
 
-// Part C Optional: All employees with default 5% bonus applied at read-time
+// Part C: Effective bonus with the default applied at read time.
 export async function findEmployeesWithEffectiveBonus(defaultPercent: number) {
   const pool = getPool();
   const result = await pool.query(`
