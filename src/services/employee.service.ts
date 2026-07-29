@@ -49,14 +49,32 @@ export async function getAllEmployees(departmentId?: number) {
 }
 
 export async function updateEmployee(id: number, data: employeeRepo.UpdateEmployeeData) {
-  // Business rule: if updating bonus and salary exists, bonus shouldn't exceed it
-  if (data.bonus !== undefined && data.bonus !== null && data.salary) {
-    if (data.bonus > data.salary) {
-      throw new ServiceError(
-        "Bonus cannot exceed base salary",
-        "VALIDATION_ERROR"
-      );
-    }
+  const existingEmployee = await employeeRepo.findEmployeeById(id);
+
+  if (!existingEmployee) {
+    throw new ServiceError(
+      `Employee with ID ${id} not found`,
+      "NOT_FOUND"
+    );
+  }
+
+  // Business rule: validate the final state after a partial update.
+  // A request may update only bonus or only salary, so compare against
+  // the existing value when the matching field is not provided.
+  const finalSalary =
+    data.salary !== undefined ? data.salary : parseFloat(existingEmployee.salary);
+  const finalBonus =
+    data.bonus !== undefined
+      ? data.bonus
+      : existingEmployee.bonus === null
+        ? null
+        : parseFloat(existingEmployee.bonus);
+
+  if (finalBonus !== null && finalBonus > finalSalary) {
+    throw new ServiceError(
+      "Bonus cannot exceed base salary",
+      "VALIDATION_ERROR"
+    );
   }
 
   const employee = await employeeRepo.updateEmployeeById(id, data);
